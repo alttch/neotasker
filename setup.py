@@ -20,7 +20,7 @@ setuptools.setup(
     install_requires=['aiosched'],
     classifiers=(
         'Programming Language :: Python :: 3',
-        'License :: OSI Approved :: MIT',
+        'License :: OSI Approved :: MIT License',
         'Topic :: Software Development :: Libraries',
     ),
 )
