@@ -13,6 +13,7 @@ from neotasker.localproxy import LocalProxy
 
 from neotasker.workers import background_worker
 from neotasker.workers import BackgroundWorker, BackgroundAsyncWorker
+from neotasker.workers import BackgroundEventWorker, BackgroundQueueWorker
 
 import neotasker.supervisor
 import aiosched

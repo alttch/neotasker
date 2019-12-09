@@ -107,84 +107,36 @@ class Test(unittest.TestCase):
         t.stop()
         self.assertGreater(result.background_worker_async_async, 0)
 
-    # def test_background_interval_worker(self):
+    def test_background_queue_worker(self):
 
-    # @background_worker(interval=0.02)
-    # def t(**kwargs):
-    # result.background_interval_worker += 1
+        @background_worker(q=True)
+        def t(a, **kwargs):
+            result.background_queue_worker += a
 
-    # t.start()
-    # wait()
-    # t.stop()
-    # self.assertLess(result.background_interval_worker, 10)
-    # self.assertGreater(result.background_interval_worker, 4)
+        t.start()
+        t.put_threadsafe(2)
+        t.put_threadsafe(3)
+        t.put_threadsafe(4)
+        wait()
+        t.stop()
+        self.assertEqual(result.background_queue_worker, 9)
 
-    # def test_background_interval_worker_async_ex(self):
+    def test_background_event_worker(self):
 
-    # @background_worker(interval=0.02)
-    # async def t(**kwargs):
-    # result.background_interval_worker_async_ex += 1
+        @background_worker(e=True)
+        def t(**kwargs):
+            result.background_event_worker += 1
 
-    # task_supervisor.default_aloop = None
-    # t.start()
-    # wait()
-    # t.stop()
-    # self.assertLess(result.background_interval_worker_async_ex, 10)
-    # self.assertGreater(result.background_interval_worker_async_ex, 4)
-
-    # def test_background_queue_worker(self):
-
-    # @background_worker(q=True)
-    # def t(a, **kwargs):
-    # result.background_queue_worker += a
-
-    # t.start()
-    # t.put_threadsafe(2)
-    # t.put_threadsafe(3)
-    # t.put_threadsafe(4)
-    # wait()
-    # t.stop()
-    # self.assertEqual(result.background_queue_worker, 9)
-
-    # def test_background_event_worker(self):
-
-    # @background_worker(e=True)
-    # def t(**kwargs):
-    # result.background_event_worker += 1
-
-    # t.start()
-    # t.trigger_threadsafe()
-    # wait()
-    # t.trigger_threadsafe()
-    # wait()
-    # t.stop()
-    # self.assertEqual(result.background_event_worker, 2)
-
-    # def test_background_interval_worker_mp(self):
-
-    # from mpworker import TestMPWorker
-
-    # t = TestMPWorker(interval=0.02)
-    # t.start()
-    # wait()
-    # t.stop()
-    # self.assertLess(t.a, 10)
-    # self.assertGreater(t.a, 4)
+        t.start()
+        t.trigger_threadsafe()
+        wait()
+        t.trigger_threadsafe()
+        wait()
+        t.stop()
+        self.assertEqual(result.background_event_worker, 2)
 
     def test_supervisor(self):
         result = task_supervisor.get_info()
-
-    # def test_aloop(self):
-
-        # @background_worker(interval=0.02)
-        # async def t(**kwargs):
-            # result.test_aloop = threading.current_thread().getName()
-
-        # task_supervisor.create_aloop('test1', default=True)
-        # t.start()
-        # wait()
-        # t.stop()
-        # self.assertEqual(result.test_aloop, 'supervisor_default_aloop_test1')
 
     def test_async_job_scheduler(self):
 
@@ -221,7 +173,7 @@ class Test(unittest.TestCase):
 
 if __name__ == '__main__':
     try:
-        # if sys.argv[1] == 'debug':
+        if sys.argv[1] == 'debug':
             logging.basicConfig(level=logging.DEBUG)
             set_debug()
     except:
