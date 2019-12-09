@@ -17,7 +17,7 @@ class FunctionCollection:
         self.on_error_kwargs = kwargs.get('on_error_kwargs', {})
         self.include_exceptions = True if kwargs.get(
             'include_exceptions') else False
-        self.default_priority = TASK_NORMAL
+        self.default_priority = 100
 
     def __call__(self, f=None, **kwargs):
 

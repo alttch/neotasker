@@ -310,11 +310,17 @@ class TaskSupervisor:
     def _stop_async_job_schedulers(self, wait=True):
         with self._lock:
             schedulers = self.async_job_schedulers.copy().items()
-        for i, s in schedulers:
+        for n, s in schedulers:
             try:
                 s.stop(wait=wait)
             except:
-                pass
+                raise
+
+    def _stop_schedulers(self, wait=True):
+        with self._lock:
+            schedulers = self._schedulers.copy()
+        for n, s in schedulers.items():
+            s.stop(wait=wait)
 
     def stop(self, wait=True, stop_schedulers=True, cancel_tasks=False):
         self._active = False
@@ -325,6 +331,7 @@ class TaskSupervisor:
         if stop_schedulers:
             self._stop_async_job_schedulers(
                 wait=to_wait - time.perf_counter() if to_wait else wait)
+            self._stop_schedulers(True if wait else False)
             if debug:
                 logger.debug('supervisor {} schedulers stopped'.format(self.id))
         with self._lock:
@@ -339,3 +346,23 @@ class TaskSupervisor:
                     self.id))
         self.thread_pool.shutdown()
         logger.info('supervisor {} stopped'.format(self.id))
+
+    def register_sync_scheduler(self, scheduler):
+        with self._lock:
+            self._schedulers[scheduler.name] = scheduler
+        return True
+
+    def register_async_scheduler(self, scheduler):
+        with self._lock:
+            self._schedulers[scheduler.name] = scheduler
+            asyncio.run_coroutine_threadsafe(scheduler.loop(),
+                                             loop=scheduler.worker_loop)
+        return True
+
+    def unregister_scheduler(self, scheduler):
+        with self._lock:
+            try:
+                del self._schedulers[scheduler.name]
+                return True
+            except:
+                return False

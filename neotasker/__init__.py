@@ -11,7 +11,8 @@ from neotasker.f import FunctionCollection
 
 from neotasker.localproxy import LocalProxy
 
-from neotasker.workers import BackgroundWorker
+from neotasker.workers import background_worker
+from neotasker.workers import BackgroundWorker, BackgroundAsyncWorker
 
 import neotasker.supervisor
 import aiosched

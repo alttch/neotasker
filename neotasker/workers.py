@@ -7,6 +7,7 @@ import queue
 import types
 
 from neotasker import task_supervisor
+from neotasker.supervisor import ALoop
 
 logger = logging.getLogger('neotasker')
 
@@ -47,11 +48,11 @@ class BackgroundWorker:
         self._active = False
         self._started = threading.Event()
         self._stopped = threading.Event()
-        self.priority = kwargs.get('priority', TASK_NORMAL)
         self.o = kwargs.get('o')
         self.on_error = kwargs.get('on_error')
         self.on_error_kwargs = kwargs.get('on_error_kwargs', {})
         self.supervisor = kwargs.get('supervisor', task_supervisor)
+        self.poll_delay = kwargs.get('poll_delay', self.supervisor.poll_delay)
         self.set_name(name)
         self._task_args = ()
         self._task_kwargs = {}
@@ -118,15 +119,7 @@ class BackgroundWorker:
             self._started.clear()
             self._stopped.clear()
             kw = kwargs.copy()
-            if '_priority' in kw:
-                self.priority = kw['_priority']
-            self._run_in_mp = isinstance(
-                self.run, types.FunctionType
-            ) and self.supervisor.mp_pool and self._can_use_mp_pool
-            if self._run_in_mp:
-                if debug: logger.debug(self.name + ' will use mp pool')
-            else:
-                kw['_worker'] = self
+            kw['_worker'] = self
             if not '_name' in kw:
                 kw['_name'] = self.name
             if not 'o' in kw:
@@ -154,13 +147,13 @@ class BackgroundWorker:
     def loop(self, *args, **kwargs):
         self.mark_started()
         while self._active:
+            self.last_executed = time.perf_counter()
             try:
                 if self.run(*args, **kwargs) is False:
                     return self._abort()
             except:
                 self.error()
         self.mark_stopped()
-        self.supervisor.mark_task_completed(task_id=kwargs['_task_id'])
 
     def mark_started(self):
         self._started.set()
@@ -190,7 +183,120 @@ class BackgroundWorker:
                 self.start_stop_lock.release()
 
     def _stop(self, **kwargs):
-        self.supervisor.unregister_sync_scheduler(self)
+        self.supervisor.unregister_scheduler(self)
 
     def wait_until_stop(self):
         self._stopped.wait()
+
+
+class BackgroundAsyncWorker(BackgroundWorker):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.worker_loop = kwargs.get('loop')
+        self.aloop = None
+        self._executor_is_async = False
+
+    def _register(self):
+        if not self.worker_loop:
+            raise RuntimeError(('{}: no loop defined').format(self.name))
+        self.supervisor.register_async_scheduler(self)
+        self._started.wait()
+
+    def _start(self, *args, **kwargs):
+        self.worker_loop = kwargs.get('_loop', self.worker_loop)
+        if isinstance(self.worker_loop, str):
+            self.worker_loop = self.supervisor.get_aloop(self.worker_loop)
+        elif not self.worker_loop and self.supervisor.default_aloop:
+            self.worker_loop = self.supervisor.default_aloop
+        if isinstance(self.worker_loop, ALoop):
+            self.aloop = self.worker_loop
+            self.worker_loop = self.worker_loop.get_loop()
+        self._executor_is_async = asyncio.iscoroutinefunction(self.run)
+        self._register()
+
+    def _stop(self, *args, **kwargs):
+        self.supervisor.unregister_scheduler(self)
+
+    def mark_started(self):
+        self._executor_stop_event = asyncio.Event()
+        super().mark_started()
+
+    async def loop(self, *args, **kwargs):
+        self.mark_started()
+        while self._active:
+            if self._current_executor:
+                await self._executor_stop_event.wait()
+                self._executor_stop_event.clear()
+            if self._active:
+                if not await self.launch_executor():
+                    break
+            else:
+                break
+            await asyncio.sleep(self.supervisor.poll_delay)
+        self.mark_stopped()
+
+    def _run(self, *args, **kwargs):
+        try:
+            try:
+                if self.run(*args, **kwargs) is False:
+                    self._abort()
+            except:
+                traceback.print_exc()
+                self.error()
+        finally:
+            self._current_executor = None
+            self._send_executor_stop_event()
+
+    def _send_executor_stop_event(self):
+        asyncio.run_coroutine_threadsafe(self._set_stop_event(),
+                                         loop=self.worker_loop)
+
+    async def _set_stop_event(self):
+        self._executor_stop_event.set()
+
+    async def launch_executor(self):
+        self.last_executed = time.perf_counter()
+        if self._executor_is_async:
+            try:
+                result = await self.run(*self._task_args, **self._task_kwargs)
+            except:
+                self.error()
+                result = None
+            if result is False: self._abort()
+            return result is not False and self._active
+        else:
+            task = self.supervisor.spawn(self._run, *self._task_args,
+                                         **self._task_kwargs)
+            self._current_executor = task
+            return task is not None and self._active
+
+
+def background_worker(*args, **kwargs):
+
+    def decorator(f, **kw):
+        func = f
+        kw = kw.copy() if kw else kwargs
+        if kwargs.get('q') or kwargs.get('queue'):
+            C = BackgroundQueueWorker
+        elif kwargs.get('e') or kwargs.get('event'):
+            C = BackgroundEventWorker
+        elif kwargs.get('i') or \
+                kwargs.get('interval') or \
+                kwargs.get('delay'):
+            C = BackgroundIntervalWorker
+        elif asyncio.iscoroutinefunction(func):
+            C = BackgroundAsyncWorker
+        else:
+            C = BackgroundWorker
+        if 'name' in kw:
+            name = kw['name']
+            del kw['name']
+        else:
+            name = func.__name__
+        f = C(name=name, **kw)
+        f.run = func
+        f._can_use_mp_pool = False
+        return f
+
+    return decorator if not args else decorator(args[0], **kwargs)
