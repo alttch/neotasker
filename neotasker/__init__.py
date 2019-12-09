@@ -11,6 +11,8 @@ from neotasker.f import FunctionCollection
 
 from neotasker.localproxy import LocalProxy
 
+from neotasker.workers import BackgroundWorker
+
 import neotasker.supervisor
 import aiosched
 
@@ -19,5 +21,5 @@ g = LocalProxy()
 
 def set_debug(mode=True):
     neotasker.supervisor.debug = mode
-    # neotasker.workers.debug = mode
+    neotasker.workers.debug = mode
     aiosched.set_debug(mode)

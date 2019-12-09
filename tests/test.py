@@ -74,16 +74,16 @@ class Test(unittest.TestCase):
         f.run()
         self.assertEqual(result.function_collection, 3)
 
-    # def test_background_worker(self):
+    def test_background_worker(self):
 
-        # @background_worker
-        # def t(**kwargs):
-            # result.background_worker += 1
+        @background_worker
+        def t(**kwargs):
+            result.background_worker += 1
 
-        # t.start()
-        # wait()
-        # t.stop()
-        # self.assertGreater(result.background_worker, 0)
+        t.start()
+        wait()
+        t.stop()
+        self.assertGreater(result.background_worker, 0)
 
     # def test_background_interval_worker(self):
 
