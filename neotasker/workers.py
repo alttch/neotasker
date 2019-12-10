@@ -41,9 +41,6 @@ class BackgroundWorker:
     def __init__(self, name=None, executor_func=None, **kwargs):
         if executor_func:
             self.run = executor_func
-            self._can_use_mp_pool = False
-        else:
-            self._can_use_mp_pool = not asyncio.iscoroutinefunction(self.run)
         self._current_executor = None
         self._active = False
         self._started = threading.Event()
