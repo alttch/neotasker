@@ -257,7 +257,7 @@ class BackgroundAsyncWorker(BackgroundWorker):
     async def launch_executor(self, *args):
         if self._executor_is_async:
             try:
-                result = await self.run(**self._executor_kwargs)
+                result = await self.run(*args, **self._executor_kwargs)
             except:
                 self.error()
                 result = None
