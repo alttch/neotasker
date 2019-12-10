@@ -230,18 +230,15 @@ class BackgroundAsyncWorker(BackgroundWorker):
                 await asyncio.sleep(self.poll_delay)
         self.mark_stopped()
 
-    def _run(self, *args, **kwargs):
+    def _run_callback(self, future):
         try:
             try:
-                result = self.run(*args, **kwargs)
-                if result is False:
+                if future.result() is False:
                     self._abort()
             except:
-                result = None
                 self.error()
         finally:
             self._send_executor_stop_event()
-        return result
 
     def _send_executor_stop_event(self):
         asyncio.run_coroutine_threadsafe(self._set_stop_event(),
@@ -261,8 +258,9 @@ class BackgroundAsyncWorker(BackgroundWorker):
             if result is False: self._abort()
             return result is not False and self._active
         else:
-            task = self.supervisor.spawn(self._run, *args,
+            task = self.supervisor.spawn(self.run, *args,
                                          **self._executor_kwargs)
+            task.add_done_callback(self._run_callback)
             self._current_executor = task
             return task is not None and self._active
 
