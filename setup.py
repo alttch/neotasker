@@ -1,4 +1,4 @@
-__version__ = '0.0.5'
+__version__ = '0.0.7'
 
 import setuptools
 
@@ -16,7 +16,7 @@ setuptools.setup(
     long_description_content_type='text/markdown',
     url='https://github.com/alttch/neotasker',
     packages=setuptools.find_packages(),
-    license='Apache License 2.0',
+    license='MIT',
     install_requires=['aiosched'],
     classifiers=(
         'Programming Language :: Python :: 3',
