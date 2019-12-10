@@ -9,6 +9,8 @@ import types
 from neotasker import task_supervisor
 from neotasker.supervisor import ALoop
 
+import concurrent.futures
+
 logger = logging.getLogger('neotasker')
 
 debug = False
@@ -38,9 +40,9 @@ class BackgroundWorker:
 
     # -----------------------
 
-    def __init__(self, name=None, executor_func=None, **kwargs):
-        if executor_func:
-            self.run = executor_func
+    def __init__(self, name=None, fn=None, **kwargs):
+        if fn:
+            self.run = fn
         self._current_executor = None
         self._active = False
         self._started = threading.Event()
@@ -55,6 +57,7 @@ class BackgroundWorker:
         self._suppress_sleep = False
         self._executor_stop_event = threading.Event()
         self._is_worker = True
+        self._run_with_worker_obj = True
 
     def set_name(self, name):
         self.name = '_background_worker_%s' % (name if name is not None else
@@ -114,7 +117,8 @@ class BackgroundWorker:
             self._started.clear()
             self._stopped.clear()
             kw = kwargs.copy()
-            kw['_worker'] = self
+            if self._run_with_worker_obj:
+                kw['_worker'] = self
             if not '_name' in kw:
                 kw['_name'] = self.name
             if not 'o' in kw:
@@ -189,6 +193,11 @@ class BackgroundAsyncWorker(BackgroundWorker):
         self.worker_loop = kwargs.get('loop')
         self.aloop = None
         self._executor_is_async = False
+        executor_pool = kwargs.get('pool')
+        self._spawn = executor_pool.submit if \
+                executor_pool else self.supervisor.spawn
+        if isinstance(executor_pool, concurrent.futures.ProcessPoolExecutor):
+            self._run_with_worker_obj = False
 
     def _register(self):
         if not self.worker_loop:
@@ -258,8 +267,7 @@ class BackgroundAsyncWorker(BackgroundWorker):
             if result is False: self._abort()
             return result is not False and self._active
         else:
-            task = self.supervisor.spawn(self.run, *args,
-                                         **self._executor_kwargs)
+            task = self._spawn(self.run, *args, **self._executor_kwargs)
             task.add_done_callback(self._run_callback)
             self._current_executor = task
             return task is not None and self._active
