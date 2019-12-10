@@ -295,7 +295,7 @@ class TaskSupervisor:
     def start(self):
 
         def _prespawn():
-            pass
+            time.sleep(0.2)
 
         for i in range(self._thread_pool_min_size):
             self.thread_pool.submit(_prespawn)
