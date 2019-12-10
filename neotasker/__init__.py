@@ -7,6 +7,9 @@ from neotasker.supervisor import TaskSupervisor
 
 task_supervisor = TaskSupervisor(supervisor_id='default')
 
+spawn = task_supervisor.spawn
+spawn_ajob = task_supervisor.create_async_job
+
 from neotasker.f import FunctionCollection
 
 from neotasker.localproxy import LocalProxy
