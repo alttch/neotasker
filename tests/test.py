@@ -96,6 +96,30 @@ class Test(unittest.TestCase):
         t.stop()
         self.assertGreater(result.background_worker_async, 0)
 
+    def test_background_interval_worker(self):
+
+        @background_worker(interval=0.02)
+        def t(**kwargs):
+            result.background_interval_worker += 1
+
+        t.start()
+        wait()
+        t.stop()
+        self.assertLess(result.background_interval_worker, 10)
+        self.assertGreater(result.background_interval_worker, 4)
+
+    def test_background_interval_worker_async_ex(self):
+
+        @background_worker(interval=0.02, name='test_async_ex')
+        async def t(**kwargs):
+            result.background_interval_worker_async_ex += 1
+
+        t.start()
+        wait()
+        t.stop()
+        self.assertLess(result.background_interval_worker_async_ex, 10)
+        self.assertGreater(result.background_interval_worker_async_ex, 4)
+
     def test_background_worker_async_async(self):
 
         @background_worker
@@ -137,6 +161,18 @@ class Test(unittest.TestCase):
 
     def test_supervisor(self):
         result = task_supervisor.get_info()
+
+    def test_aloop(self):
+
+        @background_worker(interval=0.02)
+        async def t(**kwargs):
+            result.test_aloop = threading.current_thread().getName()
+
+        task_supervisor.create_aloop('test1', default=True)
+        t.start()
+        wait()
+        t.stop()
+        self.assertEqual(result.test_aloop, 'supervisor_default_aloop_test1')
 
     def test_async_job_scheduler(self):
 

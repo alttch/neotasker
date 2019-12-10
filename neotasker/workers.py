@@ -230,7 +230,7 @@ class BackgroundAsyncWorker(BackgroundWorker):
             else:
                 break
             if not self._suppress_sleep:
-                await asyncio.sleep(self.supervisor.poll_delay)
+                await asyncio.sleep(self.poll_delay)
         self.mark_stopped()
 
     def _run(self, *args, **kwargs):
@@ -318,7 +318,7 @@ class BackgroundQueueWorker(BackgroundAsyncWorker):
                 else:
                     break
                 if not self._suppress_sleep:
-                    await asyncio.sleep(self.supervisor.poll_delay)
+                    await asyncio.sleep(self.poll_delay)
             finally:
                 self._Q.task_done()
         self.mark_stopped()
@@ -353,7 +353,7 @@ class BackgroundEventWorker(BackgroundAsyncWorker):
             if not self._active or not await self.launch_executor():
                 break
             if not self._suppress_sleep:
-                await asyncio.sleep(self.supervisor.poll_delay)
+                await asyncio.sleep(self.poll_delay)
         self.mark_stopped()
 
     def send_stop_events(self, *args, **kwargs):
@@ -366,6 +366,78 @@ class BackgroundEventWorker(BackgroundAsyncWorker):
         return self._E
 
 
+class BackgroundIntervalWorker(BackgroundAsyncWorker):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.delay = kwargs.get(
+            'interval', kwargs.get('delay', kwargs.get('delay_after', 1)))
+        if 'interval' in kwargs:
+            self.keep_interval = True
+        else:
+            self.keep_interval = False
+        self._suppress_sleep = True
+        self._sleep_task = None
+
+    def _start(self, *args, **kwargs):
+        self.delay = kwargs.get(
+            '_interval',
+            kwargs.get('_delay', kwargs.get('_delay_after', self.delay)))
+        if '_interval' in kwargs:
+            self.keep_interval = True
+        super()._start(*args, **kwargs)
+        return True
+
+    def send_stop_events(self):
+        try:
+            self.trigger_threadsafe(force=True)
+        except:
+            pass
+
+    def trigger_threadsafe(self, force=False):
+        if not self._current_executor or force:
+            asyncio.run_coroutine_threadsafe(self._cancel_sleep(),
+                                             loop=self.worker_loop)
+
+    async def trigger(self, force=False):
+        if not self._current_executor or force:
+            await self._cancel_sleep()
+
+    async def _cancel_sleep(self):
+        self._sleep_task.cancel()
+
+    async def loop(self, *args, **kwargs):
+        self.mark_started()
+        if self.keep_interval:
+            scheduled = time.perf_counter()
+        while self._active:
+            if self._current_executor:
+                await self._executor_stop_event.wait()
+                self._executor_stop_event.clear()
+            if not self._active or not await self.launch_executor():
+                break
+            if not self.delay:
+                tts = self.poll_delay
+            elif self.keep_interval:
+                scheduled += self.delay
+                tts = scheduled - time.perf_counter()
+            else:
+                tts = self.delay
+                if self._current_executor:
+                    await self._executor_stop_event.wait()
+                    self._executor_stop_event.clear()
+            if tts > 0:
+                self._sleep_task = asyncio.ensure_future(asyncio.sleep(tts))
+                try:
+                    await self._sleep_task
+                except asyncio.CancelledError:
+                    scheduled = time.perf_counter()
+                    pass
+                finally:
+                    self._sleep_task = None
+        self.mark_stopped()
+
+
 def background_worker(*args, **kwargs):
 
     def decorator(f, **kw):
@@ -375,6 +447,10 @@ def background_worker(*args, **kwargs):
             C = BackgroundQueueWorker
         elif kwargs.get('e') or kwargs.get('event'):
             C = BackgroundEventWorker
+        elif kwargs.get('i') or \
+                kwargs.get('interval') or \
+                kwargs.get('delay'):
+            C = BackgroundIntervalWorker
         elif asyncio.iscoroutinefunction(func):
             C = BackgroundAsyncWorker
         else:
@@ -386,7 +462,6 @@ def background_worker(*args, **kwargs):
             name = func.__name__
         f = C(name=name, **kw)
         f.run = func
-        f._can_use_mp_pool = False
         return f
 
     return decorator if not args else decorator(args[0], **kwargs)
