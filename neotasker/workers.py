@@ -231,7 +231,7 @@ class BackgroundAsyncWorker(BackgroundWorker):
                 await self._task_stop_event.wait()
                 self._task_stop_event.clear()
             if self._active:
-                if not await self._launch():
+                if not await self._launch_target():
                     break
             else:
                 break
@@ -257,7 +257,7 @@ class BackgroundAsyncWorker(BackgroundWorker):
         self._current_task = None
         self._task_stop_event.set()
 
-    async def _launch(self, *args):
+    async def _launch_target(self, *args):
         if self._target_is_async:
             try:
                 result = await self.run(*args, **self._target_kwargs)
@@ -316,7 +316,7 @@ class BackgroundQueueWorker(BackgroundAsyncWorker):
                     await self._task_stop_event.wait()
                     self._task_stop_event.clear()
                 if self._active and task is not None:
-                    if not await self._launch(task):
+                    if not await self._launch_target(task):
                         break
                 else:
                     break
@@ -353,7 +353,7 @@ class BackgroundEventWorker(BackgroundAsyncWorker):
                 self._task_stop_event.clear()
             await self._E.wait()
             self._E.clear()
-            if not self._active or not await self._launch():
+            if not self._active or not await self._launch_target():
                 break
             if not self._suppress_sleep:
                 await asyncio.sleep(self.poll_delay)
@@ -417,7 +417,7 @@ class BackgroundIntervalWorker(BackgroundAsyncWorker):
             if self._current_task:
                 await self._task_stop_event.wait()
                 self._task_stop_event.clear()
-            if not self._active or not await self._launch():
+            if not self._active or not await self._launch_target():
                 break
             if not self.delay:
                 tts = self.poll_delay
