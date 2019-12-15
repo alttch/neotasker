@@ -113,7 +113,7 @@ def worker2(**kwargs):
 def worker3(task, **kwargs):
     print('I run when there is a task in my queue')
 
-@background_worker(event=True, priority=TASK_HIGH)
+@background_worker(event=True)
 def worker4(**kwargs):
     print('I run when triggered with high priority')
 

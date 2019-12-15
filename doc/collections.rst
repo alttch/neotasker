@@ -5,8 +5,7 @@ Task collections are useful when you need to run a pack of tasks e.g. on
 program startup or shutdown. Currently collections support running task
 functions only either in a foreground (one-by-one) or as the threads.
 
-Function priority can be specified either as *TASK_\** (e.g. *TASK_NORMAL*) or
-as a number (lower = higher priority).
+Function priority must be specified as a number (lower = higher priority).
 
 .. automodule:: neotasker
 
