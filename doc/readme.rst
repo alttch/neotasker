@@ -121,7 +121,7 @@ Worker examples
 
    @background_worker(event=True)
    def worker4(**kwargs):
-       print('I run when triggered with high priority')
+       print('I run when triggered')
 
    worker1.start()
    worker_async.start()
