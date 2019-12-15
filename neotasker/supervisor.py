@@ -147,10 +147,9 @@ class TaskSupervisor:
 
         self.active = False
 
-    def set_thread_pool(self,
-                        min_size=0,
-                        max_size=thread_pool_default_size,
-                        pool=None):
+    def set_thread_pool(self, min_size=None, max_size=None, pool=None):
+        if min_size is None: min_size = 0
+        if max_size is None: max_size = thread_pool_default_size
         if pool is not None:
             self.thread_pool = pool
         else:
