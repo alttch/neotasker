@@ -349,12 +349,12 @@ class TaskSupervisor:
 
     def register_sync_scheduler(self, scheduler):
         with self._lock:
-            self._schedulers[scheduler.name] = scheduler
+            self._schedulers[scheduler._name] = scheduler
         return True
 
     def register_async_scheduler(self, scheduler):
         with self._lock:
-            self._schedulers[scheduler.name] = scheduler
+            self._schedulers[scheduler._name] = scheduler
             asyncio.run_coroutine_threadsafe(scheduler.loop(),
                                              loop=scheduler.worker_loop)
         return True
@@ -362,7 +362,7 @@ class TaskSupervisor:
     def unregister_scheduler(self, scheduler):
         with self._lock:
             try:
-                del self._schedulers[scheduler.name]
+                del self._schedulers[scheduler._name]
                 return True
             except:
                 return False

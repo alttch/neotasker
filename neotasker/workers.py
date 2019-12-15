@@ -60,7 +60,7 @@ class BackgroundWorker:
         self._run_with_worker_obj = True
 
     def set_name(self, name):
-        self.name = '_background_worker_%s' % (name if name is not None else
+        self._name = '_background_worker_%s' % (name if name is not None else
                                                uuid.uuid4())
 
     def restart(self, *args, **kwargs):
@@ -120,7 +120,7 @@ class BackgroundWorker:
             if self._run_with_worker_obj:
                 kw['_worker'] = self
             if not '_name' in kw:
-                kw['_name'] = self.name
+                kw['_name'] = self._name
             if not 'o' in kw:
                 kw['o'] = self.o
             self._target_kwargs = kw
@@ -155,12 +155,12 @@ class BackgroundWorker:
     def mark_started(self):
         self._started.set()
         self._stopped.clear()
-        if debug: logger.debug(self.name + ' started')
+        if debug: logger.debug(self._name + ' started')
 
     def mark_stopped(self):
         self._stopped.set()
         self._started.clear()
-        if debug: logger.debug(self.name + ' stopped')
+        if debug: logger.debug(self._name + ' stopped')
 
     def stop(self, wait=True):
         """
@@ -201,7 +201,7 @@ class BackgroundAsyncWorker(BackgroundWorker):
 
     def _register(self):
         if not self.worker_loop:
-            raise RuntimeError(('{}: no loop defined').format(self.name))
+            raise RuntimeError(('{}: no loop defined').format(self._name))
         self.supervisor.register_async_scheduler(self)
         self._started.wait()
 
