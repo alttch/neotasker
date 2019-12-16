@@ -66,11 +66,8 @@ class BackgroundWorker:
     def restart(self, *args, **kwargs):
         """
         Restart worker, all arguments will be passed to target function as-is
-
-        Args:
-            wait: if True, wait until worker is stopped
         """
-        self.stop(wait=kwargs.get('wait'))
+        self.stop(wait=True)
         self.start(*args, **kwargs)
 
     def is_active(self):
@@ -124,7 +121,7 @@ class BackgroundWorker:
             if not 'o' in kw:
                 kw['o'] = self.o
             self._target_kwargs = kw
-            self._start()
+            self._start(**kwargs)
             self.after_start()
             return True
         finally:
