@@ -380,6 +380,7 @@ class BackgroundIntervalWorker(BackgroundAsyncWorker):
             self.keep_interval = False
         self._suppress_sleep = True
         self._sleep_task = None
+        self._skip = False
 
     def _start(self, *args, **kwargs):
         self.delay = kwargs.get(
@@ -396,13 +397,15 @@ class BackgroundIntervalWorker(BackgroundAsyncWorker):
         except:
             pass
 
-    def trigger_threadsafe(self, force=False):
+    def trigger_threadsafe(self, force=False, skip=False):
         if not self._current_task or force:
+            self._skip = skip
             asyncio.run_coroutine_threadsafe(self._cancel_sleep(),
                                              loop=self.worker_loop)
 
-    async def trigger(self, force=False):
+    async def trigger(self, force=False, skip=False):
         if (self._active and not self._current_task) or force:
+            self._skip = skip
             await self._cancel_sleep()
 
     async def _cancel_sleep(self):
@@ -416,7 +419,11 @@ class BackgroundIntervalWorker(BackgroundAsyncWorker):
             if self._current_task:
                 await self._task_stop_event.wait()
                 self._task_stop_event.clear()
-            if not self._active or not await self._launch_target():
+            if not self._active:
+                break
+            if self._skip:
+                self._skip = False
+            elif not await self._launch_target():
                 break
             if not self.delay:
                 tts = self.poll_delay
