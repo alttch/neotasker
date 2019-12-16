@@ -61,7 +61,7 @@ class BackgroundWorker:
 
     def set_name(self, name):
         self._name = '_background_worker_%s' % (name if name is not None else
-                                               uuid.uuid4())
+                                                uuid.uuid4())
 
     def restart(self, *args, **kwargs):
         """
@@ -281,7 +281,9 @@ class BackgroundQueueWorker(BackgroundAsyncWorker):
             self._qclass = asyncio.queues.Queue
 
     def put_threadsafe(self, t):
-        asyncio.run_coroutine_threadsafe(self._Q.put(t), loop=self.worker_loop)
+        if self._active or t is None:
+            asyncio.run_coroutine_threadsafe(self._Q.put(t),
+                                             loop=self.worker_loop)
 
     async def put(self, t):
         await self._Q.put(t)
@@ -335,7 +337,7 @@ class BackgroundEventWorker(BackgroundAsyncWorker):
                                              loop=self.worker_loop)
 
     async def trigger(self, force=False):
-        if not self._current_task or force:
+        if (self._active and not self._current_task) or force:
             await self._set_event()
 
     async def _set_event(self):
@@ -400,7 +402,7 @@ class BackgroundIntervalWorker(BackgroundAsyncWorker):
                                              loop=self.worker_loop)
 
     async def trigger(self, force=False):
-        if not self._current_task or force:
+        if (self._active and not self._current_task) or force:
             await self._cancel_sleep()
 
     async def _cancel_sleep(self):
