@@ -330,8 +330,8 @@ triggering with *worker.trigger()* and *worker.trigger_threadsafe()*
 
 Sometimes it's required to call worker target function manually, without
 triggering - in example, to return the result to user. If you want interval
-worker to calculate interval counter from the time function was executed, use
-*skip=True* parameter when triggering:
+worker to calculate the next scheduled execution from the time when target
+function was manually executed, use *skip=True* parameter when triggering:
 
 .. code:: python
 
