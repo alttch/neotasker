@@ -329,7 +329,7 @@ As well as event worker, **BackgroundIntervalWorker** supports manual executor
 triggering with *worker.trigger()* and *worker.trigger_threadsafe()*
 
 Sometimes it's required to call worker target function manually, without
-triggering - in example, to return the result to user. If you want interval
+triggering - in example, to return result to the user. If you want interval
 worker to calculate the next scheduled execution from the time when target
 function was manually executed, use *skip=True* parameter when triggering:
 
