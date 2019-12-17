@@ -328,3 +328,16 @@ detects one of the parameters above:
 As well as event worker, **BackgroundIntervalWorker** supports manual executor
 triggering with *worker.trigger()* and *worker.trigger_threadsafe()*
 
+Sometimes it's required to call worker target function manually, without
+triggering - in example, to return the result to user. If you want interval
+worker to calculate interval counter from the time function was executed, use
+*skip=True* parameter when triggering:
+
+.. code:: python
+
+   def apifunc_trigger_worker_manually():
+      myfunc2.trigger_threadsafe(skip=True)
+      return myfunc2.run()
+
+The call acts exactly like usual triggering, except worker skip the next target
+function execution once.
