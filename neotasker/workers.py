@@ -127,7 +127,7 @@ class BackgroundWorker:
         finally:
             self.start_stop_lock.release()
 
-    def _start(self):
+    def _start(self, **kwargs):
         self.supervisor.spawn(self.loop)
         self._started.wait()
         self.supervisor.register_sync_scheduler(self)
