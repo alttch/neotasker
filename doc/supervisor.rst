@@ -89,12 +89,12 @@ Params:
 
 .. _aloops:
 
-aloops: async executors and tasks
-=================================
+aloops: async targets and tasks
+===============================
 
-Usually it's unsafe to run both :doc:`schedulers (workers)<workers>` executors
-and custom tasks in supervisor's event loop. Workers use event loop by default
-and if anything is blocked, the program may be freezed.
+Usually it's unsafe to run both :doc:`schedulers (workers)<workers>` target
+functions and custom tasks in supervisor's event loop. Workers use event loop
+by default and if anything is blocked, the program may be freezed.
 
 To avoid this, it's strongly recommended to create independent async loops for
 your custom tasks. **neotasker** supervisor has built-in engine for async
@@ -104,7 +104,7 @@ interfere with supervisor event loop and others.
 Create
 ------
 
-If you plan to use async worker executors, create aloop:
+If you plan to use async worker target functions, create aloop:
 
 .. code:: python
 
@@ -113,13 +113,13 @@ If you plan to use async worker executors, create aloop:
    # and then use
    # task_supervisor.start_aloop('myworkers')
 
-To determine in which thread executor is started, simply get its name. aloop
-threads are called "supervisor_aloop_<name>".
+To determine in which thread target function is started, simply get its name.
+aloop threads are called "supervisor_aloop_<name>".
 
 Using with workers
 ------------------
 
-Workers automatically launch async executor function in default aloop, or aloop
+Workers automatically launch async target function in default aloop, or aloop
 can be specified with *loop=* at init or *_loop=* at startup.
 
 Executing own coroutines
