@@ -331,7 +331,9 @@ class TaskSupervisor:
                             logger.critical('{} pool health check OK'.format(
                                 self.id))
                 except CFTimeoutError:
-                    logger.critical('{} pool timeout'.format(self.id))
+                    logger.critical(
+                        '{} pool timeout. Consider increasing thread pool size'.
+                        format(self.id))
                 except:
                     if debug:
                         import traceback
