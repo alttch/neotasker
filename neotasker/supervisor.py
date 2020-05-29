@@ -309,7 +309,8 @@ class TaskSupervisor:
         self._active = True
         threading.Thread(target=self._monitor,
                          daemon=True,
-                         name='{}_pool_monitor'.format(self.id)).start()
+                         name='supervisor_{}_pool_monitor'.format(
+                             self.id)).start()
         logger.info('supervisor {} started, executor pool: {}/{}'.format(
             self.id, self._thread_pool_min_size, self._thread_pool_max_size))
 
