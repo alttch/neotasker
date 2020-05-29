@@ -5,7 +5,8 @@ import logging
 import asyncio
 import uuid
 
-from concurrent.futures import CancelledError, ThreadPoolExecutor
+from concurrent.futures import (CancelledError, ThreadPoolExecutor, TimeoutError
+                                as CFTimeoutError)
 from aiosched import AsyncJobScheduler
 
 debug = False
@@ -111,7 +112,8 @@ class ALoop:
                         if not t.cancelled() and not t.done():
                             can_break = False
                             break
-                    if can_break: break
+                    if can_break:
+                        break
                 time.sleep(self.poll_delay)
         if wait and self.thread:
             self.thread.join()
@@ -147,9 +149,15 @@ class TaskSupervisor:
 
         self.active = False
 
+        self.pool_timeout = 1
+
+        self.pool_check_interval = 5
+
     def set_thread_pool(self, min_size=None, max_size=None, pool=None):
-        if min_size is None: min_size = 0
-        if max_size is None: max_size = thread_pool_default_size
+        if min_size is None:
+            min_size = 0
+        if max_size is None:
+            max_size = thread_pool_default_size
         if pool is not None:
             self.thread_pool = pool
         else:
@@ -299,8 +307,37 @@ class TaskSupervisor:
         for i in range(self._thread_pool_min_size):
             self.thread_pool.submit(_prespawn)
         self._active = True
+        threading.Thread(target=self._monitor,
+                         daemon=True,
+                         name='{}_pool_monitor'.format(self.id)).start()
         logger.info('supervisor {} started, executor pool: {}/{}'.format(
             self.id, self._thread_pool_min_size, self._thread_pool_max_size))
+
+    def _monitor(self):
+
+        def _test():
+            return True
+
+        while self._active:
+            time.sleep(self.pool_check_interval)
+            if self._active:
+                future = self.spawn(_test)
+                try:
+                    result = future.result(timeout=self.pool_timeout)
+                    if result is not True:
+                        logger.critical('{} pool error'.format(self.id))
+                    else:
+                        if debug:
+                            logger.critical('{} pool health check OK'.format(
+                                self.id))
+                except CFTimeoutError:
+                    logger.critical('{} pool timeout'.format(self.id))
+                except:
+                    if debug:
+                        import traceback
+                        logger.debug(traceback.format_exc())
+            else:
+                break
 
     def block(self):
         while self.active:
