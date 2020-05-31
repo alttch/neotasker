@@ -141,23 +141,27 @@ class BackgroundWorker:
 
     def loop(self):
         self.mark_started()
-        while self._active:
-            try:
-                if self.run(**self._target_kwargs) is False:
-                    return self._abort()
-            except:
-                self.error()
-        self.mark_stopped()
+        try:
+            while self._active:
+                try:
+                    if self.run(**self._target_kwargs) is False:
+                        return self._abort()
+                except:
+                    self.error()
+        finally:
+            self.mark_stopped()
 
     def mark_started(self):
         self._started.set()
         self._stopped.clear()
-        if debug: logger.debug(self._name + ' started')
+        if debug:
+            logger.debug(self._name + ' started')
 
     def mark_stopped(self):
         self._stopped.set()
         self._started.clear()
-        if debug: logger.debug(self._name + ' stopped')
+        if debug:
+            logger.debug(self._name + ' stopped')
 
     def stop(self, wait=True):
         """
@@ -223,18 +227,20 @@ class BackgroundAsyncWorker(BackgroundWorker):
 
     async def loop(self, *args, **kwargs):
         self.mark_started()
-        while self._active:
-            if self._current_task:
-                await self._task_stop_event.wait()
-                self._task_stop_event.clear()
-            if self._active:
-                if not await self._launch_target():
+        try:
+            while self._active:
+                if self._current_task:
+                    await self._task_stop_event.wait()
+                    self._task_stop_event.clear()
+                if self._active:
+                    if not await self._launch_target():
+                        break
+                else:
                     break
-            else:
-                break
-            if not self._suppress_sleep:
-                await asyncio.sleep(self.poll_delay)
-        self.mark_stopped()
+                if not self._suppress_sleep:
+                    await asyncio.sleep(self.poll_delay)
+        finally:
+            self.mark_stopped()
 
     def _run_callback(self, future):
         try:
@@ -261,7 +267,8 @@ class BackgroundAsyncWorker(BackgroundWorker):
             except:
                 self.error()
                 result = None
-            if result is False: self._abort()
+            if result is False:
+                self._abort()
             return result is not False and self._active
         else:
             task = self._spawn(self.run, *args, **self._target_kwargs)
@@ -306,24 +313,26 @@ class BackgroundQueueWorker(BackgroundAsyncWorker):
     async def loop(self, *args, **kwargs):
         self._Q = self._qclass()
         self.mark_started()
-        while self._active:
-            self.before_queue_get()
-            task = await self._Q.get()
-            self.after_queue_get(task)
-            try:
-                if self._current_task:
-                    await self._task_stop_event.wait()
-                    self._task_stop_event.clear()
-                if self._active and task is not None:
-                    if not await self._launch_target(task):
+        try:
+            while self._active:
+                self.before_queue_get()
+                task = await self._Q.get()
+                self.after_queue_get(task)
+                try:
+                    if self._current_task:
+                        await self._task_stop_event.wait()
+                        self._task_stop_event.clear()
+                    if self._active and task is not None:
+                        if not await self._launch_target(task):
+                            break
+                    else:
                         break
-                else:
-                    break
-                if not self._suppress_sleep:
-                    await asyncio.sleep(self.poll_delay)
-            finally:
-                self._Q.task_done()
-        self.mark_stopped()
+                    if not self._suppress_sleep:
+                        await asyncio.sleep(self.poll_delay)
+                finally:
+                    self._Q.task_done()
+        finally:
+            self.mark_stopped()
 
     def get_queue_obj(self):
         return self._Q
@@ -346,17 +355,19 @@ class BackgroundEventWorker(BackgroundAsyncWorker):
     async def loop(self, *args, **kwargs):
         self._E = asyncio.Event()
         self.mark_started()
-        while self._active:
-            if self._current_task:
-                await self._task_stop_event.wait()
-                self._task_stop_event.clear()
-            await self._E.wait()
-            self._E.clear()
-            if not self._active or not await self._launch_target():
-                break
-            if not self._suppress_sleep:
-                await asyncio.sleep(self.poll_delay)
-        self.mark_stopped()
+        try:
+            while self._active:
+                if self._current_task:
+                    await self._task_stop_event.wait()
+                    self._task_stop_event.clear()
+                await self._E.wait()
+                self._E.clear()
+                if not self._active or not await self._launch_target():
+                    break
+                if not self._suppress_sleep:
+                    await asyncio.sleep(self.poll_delay)
+        finally:
+            self.mark_stopped()
 
     def send_stop_events(self, *args, **kwargs):
         try:
@@ -413,38 +424,40 @@ class BackgroundIntervalWorker(BackgroundAsyncWorker):
 
     async def loop(self, *args, **kwargs):
         self.mark_started()
-        if self.keep_interval:
-            scheduled = time.perf_counter()
-        while self._active:
-            if self._current_task:
-                await self._task_stop_event.wait()
-                self._task_stop_event.clear()
-            if not self._active:
-                break
-            if self._skip:
-                self._skip = False
-            elif not await self._launch_target():
-                break
-            if not self.delay:
-                tts = self.poll_delay
-            elif self.keep_interval:
-                scheduled += self.delay
-                tts = scheduled - time.perf_counter()
-            else:
-                tts = self.delay
+        try:
+            if self.keep_interval:
+                scheduled = time.perf_counter()
+            while self._active:
                 if self._current_task:
                     await self._task_stop_event.wait()
                     self._task_stop_event.clear()
-            if tts > 0:
-                self._sleep_task = asyncio.ensure_future(asyncio.sleep(tts))
-                try:
-                    await self._sleep_task
-                except asyncio.CancelledError:
-                    scheduled = time.perf_counter()
-                    pass
-                finally:
-                    self._sleep_task = None
-        self.mark_stopped()
+                if not self._active:
+                    break
+                if self._skip:
+                    self._skip = False
+                elif not await self._launch_target():
+                    break
+                if not self.delay:
+                    tts = self.poll_delay
+                elif self.keep_interval:
+                    scheduled += self.delay
+                    tts = scheduled - time.perf_counter()
+                else:
+                    tts = self.delay
+                    if self._current_task:
+                        await self._task_stop_event.wait()
+                        self._task_stop_event.clear()
+                if tts > 0:
+                    self._sleep_task = asyncio.ensure_future(asyncio.sleep(tts))
+                    try:
+                        await self._sleep_task
+                    except asyncio.CancelledError:
+                        scheduled = time.perf_counter()
+                        pass
+                    finally:
+                        self._sleep_task = None
+        finally:
+            self.mark_stopped()
 
 
 def background_worker(*args, **kwargs):
