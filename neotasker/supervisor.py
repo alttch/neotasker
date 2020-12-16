@@ -18,6 +18,12 @@ mp_pool_default_size = multiprocessing.cpu_count()
 
 default_poll_delay = 0.01
 
+# Python 3.6 compat
+try:
+    asyncio.all_tasks
+except AttributeError:
+    asyncio.all_tasks = asyncio.Task.all_tasks
+
 
 class ALoop:
 
@@ -77,7 +83,7 @@ class ALoop:
             self.supervisor.id, self.name))
 
     def _cancel_all_tasks(self):
-        for task in asyncio.Task.all_tasks(loop=self._loop):
+        for task in asyncio.all_tasks(loop=self._loop):
             task.cancel()
 
     async def _set_stop_event(self):
@@ -108,7 +114,7 @@ class ALoop:
                     break
                 else:
                     can_break = True
-                    for t in asyncio.Task.all_tasks(self._loop):
+                    for t in asyncio.all_tasks(self._loop):
                         if not t.cancelled() and not t.done():
                             can_break = False
                             break
