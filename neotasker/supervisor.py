@@ -153,7 +153,7 @@ class TaskSupervisor:
 
         self.set_thread_pool()
 
-        self.active = False
+        self._active = False
 
         self.pool_timeout = 1
 
@@ -288,7 +288,7 @@ class TaskSupervisor:
         result = SupervisorInfo()
         with self._lock:
             result.id = self.id
-            result.active = self.active
+            result.active = self._active
             if aloops:
                 result.aloops = self.aloops.copy()
             if schedulers:
@@ -349,7 +349,7 @@ class TaskSupervisor:
                 break
 
     def block(self):
-        while self.active:
+        while self._active:
             time.sleep(0.1)
 
     def _stop_async_job_schedulers(self, wait=True):
@@ -411,3 +411,7 @@ class TaskSupervisor:
                 return True
             except:
                 return False
+
+    @property
+    def active(self):
+        return self._active
