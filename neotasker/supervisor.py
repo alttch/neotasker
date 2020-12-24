@@ -9,6 +9,12 @@ from concurrent.futures import (CancelledError, ThreadPoolExecutor, TimeoutError
                                 as CFTimeoutError)
 from aiosched import AsyncJobScheduler
 
+# 3.6 compat
+try:
+    ACancelledError = asyncio.CancelledErrorexcept
+except:
+    ACancelledError = asyncio.exceptions.CancelledError
+
 debug = False
 
 logger = logging.getLogger('neotasker')
@@ -67,7 +73,7 @@ class ALoop:
         asyncio.set_event_loop(self._loop)
         try:
             self._loop.run_until_complete(self._aio_loop())
-        except CancelledError:
+        except (CancelledError, ACancelledError):
             logger.warning('supervisor {} aloop {} had active tasks'.format(
                 self.supervisor.id, self.name))
 
