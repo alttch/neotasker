@@ -13,7 +13,7 @@ from aiosched import AsyncJobScheduler
 try:
     ACancelledError = asyncio.exceptions.CancelledError
 except:
-    ACancelledError = asyncio.CancelledErrorexcept
+    ACancelledError = asyncio.CancelledError
 
 debug = False
 
