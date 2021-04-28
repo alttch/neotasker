@@ -383,8 +383,12 @@ class BackgroundIntervalWorker(BackgroundAsyncWorker):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.delay = float(kwargs.get(
-            'interval', kwargs.get('delay', kwargs.get('delay_after', 1))))
+        self.delay = kwargs.get(
+            'interval', kwargs.get('delay', kwargs.get('delay_after', 1)))
+        if self.delay is None:
+            self.delay = 1
+        else:
+            self.delay = float(self.delay)
         if 'interval' in kwargs:
             self.keep_interval = True
         else:
@@ -394,9 +398,13 @@ class BackgroundIntervalWorker(BackgroundAsyncWorker):
         self._skip = False
 
     def _start(self, *args, **kwargs):
-        self.delay = float(kwargs.get(
+        self.delay = kwargs.get(
             '_interval',
-            kwargs.get('_delay', kwargs.get('_delay_after', self.delay))))
+            kwargs.get('_delay', kwargs.get('_delay_after', self.delay)))
+        if self.delay is None:
+            self.delay = 1
+        else:
+            self.delay = float(self.delay)
         if '_interval' in kwargs:
             self.keep_interval = True
         super()._start(*args, **kwargs)
