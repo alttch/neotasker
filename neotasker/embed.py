@@ -5,6 +5,7 @@ import sys
 import asyncio
 import traceback
 import logging
+import signal
 from neotasker import task_supervisor
 
 from types import SimpleNamespace
@@ -46,8 +47,10 @@ def add_import_path(import_path):
 
 def start():
     """
-    Starts neotasker, creates "eapi" asyncio loop
+    Starts neotasker, creates "eapi" asyncio loop, disables C-c
     """
+    def handler(signum, frame): pass
+    signal.signal(signal.SIGINT, handler)
     _d.loop = task_supervisor.create_aloop('eapi').get_loop()
     task_supervisor.start()
     if debug:
