@@ -144,7 +144,9 @@ def report_result(call_id, result=None, error=None):
 
 def set_debug(mode=True):
     """
-    Link to neotasker.set_debug
+    Settings logging to DEBUG and enables neotasker debug mode
     """
+    import logging
+    logging.basicConfig(level=logging.DEBUG)
     from neotasker import set_debug as _set_debug
     _set_debug(mode)
