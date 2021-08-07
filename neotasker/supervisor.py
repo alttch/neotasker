@@ -341,7 +341,7 @@ class TaskSupervisor:
                         logger.critical('{} pool error'.format(self.id))
                     else:
                         if debug:
-                            logger.critical('{} pool health check OK'.format(
+                            logger.debug('{} pool health check OK'.format(
                                 self.id))
                 except CFTimeoutError:
                     logger.critical(
