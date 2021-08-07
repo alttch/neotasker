@@ -20,6 +20,7 @@ from neotasker.workers import BackgroundEventWorker, BackgroundQueueWorker
 from neotasker.workers import BackgroundIntervalWorker
 
 import neotasker.supervisor
+import neotasker.embed
 import aiosched
 
 g = LocalProxy()
@@ -28,4 +29,5 @@ g = LocalProxy()
 def set_debug(mode=True):
     neotasker.supervisor.debug = mode
     neotasker.workers.debug = mode
+    neotasker.embed.debug = mode
     aiosched.set_debug(mode)
