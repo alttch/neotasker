@@ -49,7 +49,10 @@ def start():
     """
     Starts neotasker, creates "eapi" asyncio loop, disables C-c
     """
-    def handler(signum, frame): pass
+
+    def handler(signum, frame):
+        pass
+
     signal.signal(signal.SIGINT, handler)
     _d.loop = task_supervisor.create_aloop('eapi').get_loop()
     task_supervisor.start()
@@ -107,6 +110,22 @@ async def call_async(call_id, func, *args, **kwargs):
     try:
         result = await _d.loop.run_in_executor(task_supervisor.thread_pool,
                                                func, *args, **kwargs)
+        if debug:
+            logging.debug(f'task {call_id} result:\n{result}\n' + '-' * 40)
+        report_result(call_id, result=result)
+    except Exception as e:
+        if debug:
+            logging.debug(
+                f'task {call_id} exception {e.__class__.__name__}: {e}'
+                f'\n{traceback.format_exc()}\n' + '-' * 40)
+        report_result(call_id,
+                      error=(e.__class__.__name__, str(e),
+                             traceback.format_exc()))
+
+
+def call_direct(call_id, func, *args, **kwargs):
+    try:
+        result = func(*args, **kwargs)
         if debug:
             logging.debug(f'task {call_id} result:\n{result}\n' + '-' * 40)
         report_result(call_id, result=result)
