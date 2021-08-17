@@ -8,6 +8,8 @@ import logging
 import signal
 from neotasker import task_supervisor
 
+logger = logging.getLogger('neotasker')
+
 from types import SimpleNamespace
 
 _d = SimpleNamespace(loop=None)
@@ -57,7 +59,7 @@ def start():
     _d.loop = task_supervisor.create_aloop('eapi').get_loop()
     task_supervisor.start()
     if debug:
-        logging.debug('neotasker embed started')
+        logger.debug('neotasker embed started')
 
 
 def stop(wait=True):
@@ -75,7 +77,7 @@ def spawn(func, *args, **kwargs):
     Spawns task in thread pool, does not return the result
     """
     if debug:
-        logging.debug(
+        logger.debug(
             f'spawning task: {func}\nargs: {args}\nkwargs: {kwargs}\n' +
             '-' * 40)
     task_supervisor.spawn(func, *args, **kwargs)
@@ -91,7 +93,7 @@ def call(call_id, func, *args, **kwargs):
         call_id: custom identifier used by callback to report the result
     """
     if debug:
-        logging.debug(f'(sync) calling task {call_id}: {func}')
+        logger.debug(f'(sync) calling task {call_id}: {func}')
     asyncio.run_coroutine_threadsafe(call_async(call_id, func, *args, **kwargs),
                                      loop=_d.loop)
 
@@ -104,18 +106,18 @@ async def call_async(call_id, func, *args, **kwargs):
         call_id: custom identifier used by callback to report the result
     """
     if debug:
-        logging.debug(
+        logger.debug(
             f'calling task {call_id}: {func}\nargs: {args}\nkwargs: {kwargs}\n'
             + '-' * 40)
     try:
         result = await _d.loop.run_in_executor(task_supervisor.thread_pool,
                                                func, *args, **kwargs)
         if debug:
-            logging.debug(f'task {call_id} result:\n{result}\n' + '-' * 40)
+            logger.debug(f'task {call_id} result:\n{result}\n' + '-' * 40)
         report_result(call_id, result=result)
     except Exception as e:
         if debug:
-            logging.debug(
+            logger.debug(
                 f'task {call_id} exception {e.__class__.__name__}: {e}'
                 f'\n{traceback.format_exc()}\n' + '-' * 40)
         report_result(call_id,
@@ -127,11 +129,11 @@ def call_direct(call_id, func, *args, **kwargs):
     try:
         result = func(*args, **kwargs)
         if debug:
-            logging.debug(f'task {call_id} result:\n{result}\n' + '-' * 40)
+            logger.debug(f'task {call_id} result:\n{result}\n' + '-' * 40)
         report_result(call_id, result=result)
     except Exception as e:
         if debug:
-            logging.debug(
+            logger.debug(
                 f'task {call_id} exception {e.__class__.__name__}: {e}'
                 f'\n{traceback.format_exc()}\n' + '-' * 40)
         report_result(call_id,
