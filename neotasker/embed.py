@@ -166,11 +166,15 @@ def report_result(call_id, result=None, error=None):
     print('-' * 40, file=sys.stderr, flush=True)
 
 
-def set_debug(mode=True):
+def set_debug(mode=True, nlevel=logging.INFO):
     """
     Settings logging to DEBUG and enables neotasker debug mode
+
+    Args:
+        mode: set debug mode (True/False)
+        nlevel: logger level if debug is turned off
     """
     import logging
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.DEBUG if mode else nlevel)
     from neotasker import set_debug as _set_debug
     _set_debug(mode)
